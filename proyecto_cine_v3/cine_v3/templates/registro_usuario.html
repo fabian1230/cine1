@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} – Crear cuenta</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .auth-sub { color:var(--pearl-dim); font-size:.9rem; margin-bottom:28px; margin-top:-12px; }
+    .auth-link { margin-top:20px; font-size:.85rem; color:var(--pearl-dim); text-align:center; }
+    .auth-link a { color:var(--gold); text-decoration:none; font-weight:600; }
+    .auth-divider { display:flex; align-items:center; gap:12px; margin:20px 0; color:var(--pearl-dim); font-size:.8rem; }
+    .auth-divider::before,.auth-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    #msg-reg { display:none; padding:10px 14px; border-radius:var(--radius-sm); background:rgba(192,57,43,0.15); border:1px solid var(--crimson); color:var(--crimson-bright); font-size:.875rem; margin-bottom:12px; }
+    .hint { font-size:.78rem; color:var(--pearl-dim); margin-top:4px; }
+    .auth-card-wrap { position:relative; overflow:hidden; }
+    .auth-card-wrap::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--gold-dim),var(--gold),var(--gold-dim)); }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">{{ brand_name }}</div>
+    <nav>
+      <a href="/">Cartelera</a>
+      <a href="/login">Iniciar sesión</a>
+    </nav>
+  </div>
+</header>
+<main style="display:flex;justify-content:center;padding:60px 16px">
+  <div class="auth-card-wrap" style="background:var(--panel);border-radius:var(--radius-lg);padding:40px 36px;max-width:440px;width:100%;border:1px solid var(--border-2);box-shadow:var(--shadow)">
+    <h2 style="font-family:'Playfair Display',serif;font-size:1.9rem;color:var(--pearl);margin-bottom:6px">Crear cuenta</h2>
+    <p class="auth-sub">Regístrate para guardar tu historial de tiquetes</p>
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input type="text" id="nombre" placeholder="Tu nombre" autocomplete="name" />
+    </div>
+    <div class="form-group">
+      <label>Correo electrónico</label>
+      <input type="email" id="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="new-password" />
+      <p class="hint">Mínimo 6 caracteres</p>
+    </div>
+    <p id="msg-reg"></p>
+    <button class="btn-primary" id="btn-reg" onclick="doRegistro()" style="width:100%;justify-content:center">Crear cuenta</button>
+    <div class="auth-divider">o</div>
+    <p class="auth-link">¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></p>
+  </div>
+</main>
+<script>
+async function doRegistro() {
+  const btn=document.getElementById('btn-reg'), msg=document.getElementById('msg-reg');
+  msg.style.display='none'; btn.disabled=true; btn.textContent='Creando cuenta...';
+  const res=await fetch('/api/auth/registro',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({nombre:document.getElementById('nombre').value,email:document.getElementById('email').value,password:document.getElementById('password').value})});
+  const data=await res.json();
+  if(res.ok){window.location.href='/';}
+  else{msg.textContent=data.error;msg.style.display='block';btn.disabled=false;btn.textContent='Crear cuenta';}
+}
+</script>
+</body>
+</html>
+

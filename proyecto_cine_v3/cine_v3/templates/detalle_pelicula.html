@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ pelicula.titulo }} – {{ brand_name }}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .detalle-hero { display:flex; gap:40px; margin-bottom:48px; flex-wrap:wrap; align-items:flex-start; }
+    .detalle-poster { width:280px; flex-shrink:0; border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow),var(--shadow-gold); }
+    .detalle-poster img { width:100%; display:block; }
+    .detalle-info h1 { font-family:'Playfair Display',serif; font-size:2.4rem; font-weight:900; margin-bottom:12px; }
+    .detalle-info .meta { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .meta-pill { background:var(--panel-2); border:1px solid var(--border); color:var(--pearl-dim); padding:5px 12px; border-radius:20px; font-size:.8rem; }
+    .detalle-info p.desc { color:var(--pearl-dim); line-height:1.8; font-size:.95rem; max-width:540px; margin-bottom:24px; }
+    .funciones-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+    .funcion-item { background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; cursor:pointer; transition:all .2s; }
+    .funcion-item:hover { border-color:var(--gold); transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+    .funcion-fecha { font-size:.8rem; color:var(--pearl-dim); margin-bottom:6px; }
+    .funcion-hora { font-family:'Playfair Display',serif; font-size:1.5rem; color:var(--pearl); margin-bottom:4px; }
+    .funcion-sala { font-size:.82rem; color:var(--pearl-dim); }
+    .funcion-precio { font-size:1rem; color:var(--gold); font-weight:700; margin-top:8px; }
+    .formato-badge { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:4px; letter-spacing:1px; }
+    .fmt-imax { background:rgba(212,168,67,.2); color:var(--gold); border:1px solid var(--border-2); }
+    .fmt-3d   { background:rgba(37,194,110,.15); color:#25c26e; border:1px solid rgba(37,194,110,.3); }
+    .fmt-2d   { background:var(--panel); color:var(--pearl-dim); border:1px solid var(--border); }
+    .trailer-btn { display:inline-flex; align-items:center; gap:8px; background:rgba(192,57,43,.15); border:1px solid var(--crimson); color:var(--crimson-bright); padding:10px 20px; border-radius:var(--radius-sm); text-decoration:none; font-size:.9rem; font-weight:600; transition:all .2s; }
+    .trailer-btn:hover { background:var(--crimson); color:#fff; }
+    .sin-funciones { color:var(--pearl-dim); font-style:italic; padding:20px 0; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">{{ brand_name }}</div>
+    <nav>
+      <a href="/"> Cartelera</a>
+      {% if logueado %}
+        <a href="/historial">Mis Tiquetes</a>
+        <a href="/perfil" class="nav-usuario">👤 {{ usuario }}</a>
+        <a href="/logout">Salir</a>
+      {% else %}
+        <a href="/login">Iniciar sesión</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="detalle-hero">
+    <div class="detalle-poster">
+      <img src="{{ pelicula.imagen_url or '' }}" alt="{{ pelicula.titulo }}"
+           onerror="this.src=''" />
+    </div>
+    <div class="detalle-info">
+      <h1>{{ pelicula.titulo }}</h1>
+      <div class="meta">
+        {% if pelicula.clasificacion %}<span class="meta-pill">{{ pelicula.clasificacion }}</span>{% endif %}
+        {% if pelicula.genero %}<span class="meta-pill">{{ pelicula.genero }}</span>{% endif %}
+        {% if pelicula.duracion %}<span class="meta-pill">{{ pelicula.duracion }} min</span>{% endif %}
+      </div>
+      <p class="desc">{{ pelicula.descripcion or 'Sin descripción disponible.' }}</p>
+      {% if pelicula.trailer_url %}
+        <a href="{{ pelicula.trailer_url }}" target="_blank" class="trailer-btn">▶ Ver Tráiler</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:18px;">Funciones disponibles</h2>
+  <div id="funciones-list">Cargando funciones...</div>
+</main>
+
+<script>
+const peliculaId = {{ pelicula.id }};
+
+async function cargarFunciones() {
+  const res   = await fetch('/api/cartelera');
+  const data  = await res.json();
+  const peli  = data.find(p => p.id === peliculaId);
+  const cont  = document.getElementById('funciones-list');
+  if (!peli || !peli.funciones.length) {
+    cont.innerHTML = '<p class="sin-funciones">No hay funciones disponibles para esta película.</p>';
+    return;
+  }
+  const fmtClass = { 'IMAX':'fmt-imax', '3D':'fmt-3d', '2D':'fmt-2d' };
+  cont.innerHTML = `<div class="funciones-grid">${peli.funciones.map(f => `
+    <div class="funcion-item" onclick="window.location.href='/asientos?funcion_id=${f.id}'">
+      <div class="funcion-fecha">📅 ${f.fecha}</div>
+      <div class="funcion-hora">${(f.hora||'').slice(0,5)}</div>
+      <div class="funcion-sala"> ${f.sala} &nbsp;<span class="formato-badge ${fmtClass[f.formato]||'fmt-2d'}">${f.formato||'2D'}</span></div>
+      <div class="funcion-precio">$${Number(f.precio).toLocaleString()}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+cargarFunciones();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} – Administración</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .admin-login-wrap { display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
+    .admin-login-box { background:var(--panel); border-radius:var(--radius-lg); padding:44px 40px; max-width:420px; width:100%; border:1px solid var(--border-2); box-shadow:var(--shadow); position:relative; overflow:hidden; text-align:center; }
+    .admin-login-box::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--crimson),var(--gold),var(--crimson)); }
+    .admin-icon { width:60px; height:60px; background:rgba(192,57,43,0.15); border:1px solid rgba(192,57,43,0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.6rem; margin:0 auto 20px; }
+    #msg-admin { display:none; padding:10px 14px; border-radius:var(--radius-sm); background:rgba(192,57,43,0.15); border:1px solid var(--crimson); color:var(--crimson-bright); font-size:.875rem; margin-bottom:12px; }
+  </style>
+</head>
+<body>
+<main class="admin-login-wrap">
+  <div class="admin-login-box">
+    <div class="admin-icon">⚙</div>
+    <h2 style="font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--pearl);margin-bottom:6px">{{ brand_admin_name }}</h2>
+    <p style="color:var(--pearl-dim);font-size:.875rem;margin-bottom:28px;text-align:left">{{ brand_tagline }}. Acceso restringido al personal autorizado</p>
+    <div class="form-group" style="text-align:left">
+      <label>Correo electrónico</label>
+      <input type="email" id="email" placeholder="admin@cine.com" autocomplete="email" />
+    </div>
+    <div class="form-group" style="text-align:left">
+      <label>Contraseña</label>
+      <input type="password" id="password" placeholder="••••••••" />
+    </div>
+    <p id="msg-admin"></p>
+    <button class="btn-primary" id="btn-admin" onclick="doAdminLogin()" style="width:100%;justify-content:center;background:linear-gradient(135deg,var(--crimson),#8b1a1a);box-shadow:0 4px 20px rgba(192,57,43,0.35)">
+      Acceder al panel
+    </button>
+    <p style="margin-top:20px;font-size:.8rem"><a href="/" style="color:var(--pearl-dim)"> Volver a cartelera</a></p>
+  </div>
+</main>
+<script>
+async function doAdminLogin() {
+  const btn = document.getElementById('btn-admin');
+  const msg = document.getElementById('msg-admin');
+  msg.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Verificando...';
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      email: document.getElementById('email').value,
+      password: document.getElementById('password').value
+    })
+  });
+  const data = await res.json();
+  if (res.ok && data.rol === 'admin') {
+    window.location.href = '/admin/panel';
+  } else {
+    msg.textContent = data.error || 'Acceso denegado. No tienes permisos de administrador.';
+    msg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Acceder al panel';
+  }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doAdminLogin(); });
+</script>
+</body>
+</html>
+
+

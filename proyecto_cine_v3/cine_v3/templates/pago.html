@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} – Pago</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .pago-wrap { display:flex; justify-content:center; padding:50px 16px; }
+    .pago-box { background:var(--panel); border-radius:var(--radius-lg); padding:40px 36px; max-width:520px; width:100%; border:1px solid var(--border-2); box-shadow:var(--shadow); position:relative; overflow:hidden; }
+    .pago-box::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--gold-dim),var(--gold),var(--gold-dim)); }
+    .pago-title { font-family:'Playfair Display',serif; font-size:1.7rem; color:var(--pearl); margin-bottom:6px; }
+    .pago-subtitle { color:var(--pearl-dim); font-size:.875rem; margin-bottom:24px; }
+    .pago-resumen { background:var(--panel-2); border-radius:var(--radius); padding:18px 20px; margin-bottom:28px; border:1px solid var(--border); }
+    .resumen-row { display:flex; justify-content:space-between; padding:7px 0; font-size:.875rem; color:var(--pearl-dim); border-bottom:1px solid var(--border); }
+    .resumen-row:last-child { border:none; padding-top:12px; }
+    .resumen-row.total strong { font-family:'Playfair Display',serif; font-size:1.25rem; color:var(--gold); }
+    .card-preview { background:linear-gradient(135deg,var(--panel-2),#0d1520); border-radius:var(--radius); padding:20px; margin-bottom:24px; border:1px solid var(--border-2); position:relative; min-height:70px; display:flex; align-items:flex-end; justify-content:space-between; }
+    .card-chip { width:32px; height:24px; background:linear-gradient(135deg,var(--gold-dim),var(--gold)); border-radius:4px; position:absolute; top:18px; left:20px; }
+    .card-network { color:var(--gold); font-weight:700; font-size:.9rem; letter-spacing:.05em; }
+    .card-number-display { font-size:1.1rem; letter-spacing:.15em; color:var(--pearl); margin-top:20px; font-family:'DM Mono',monospace; }
+    .pago-2col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    #msg-pago { display:none; padding:10px 14px; border-radius:var(--radius-sm); background:rgba(192,57,43,0.15); border:1px solid var(--crimson); color:var(--crimson-bright); font-size:.875rem; margin-bottom:12px; }
+    .pago-seguro { display:flex; gap:16px; justify-content:center; margin-top:16px; font-size:.78rem; color:var(--pearl-dim); flex-wrap:wrap; }
+    .pago-progreso { margin-top:20px; }
+    .progreso-steps { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+    .step-item { display:flex; align-items:center; gap:10px; font-size:.85rem; color:var(--pearl-dim); }
+    .step-dot { width:8px; height:8px; border-radius:50%; background:var(--border); flex-shrink:0; transition:background .3s; }
+    .step-dot.active { background:var(--gold); box-shadow:0 0 10px rgba(212,168,67,0.5); }
+    .step-dot.done { background:var(--green-bright); }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">{{ brand_name }}</div>
+    <nav><a href="/">Cartelera</a></nav>
+  </div>
+</header>
+<main class="pago-wrap">
+  <div class="pago-box">
+    <h2 class="pago-title">Pago seguro</h2>
+    <p class="pago-subtitle">Tus datos están protegidos con encriptación SSL</p>
+
+    <div class="pago-resumen" id="pago-resumen">
+      <div class="resumen-row"><span>Película</span><strong id="p-pelicula">—</strong></div>
+      <div class="resumen-row"><span>Función</span><strong id="p-funcion">—</strong></div>
+      <div class="resumen-row"><span>Asientos</span><strong id="p-asientos">—</strong></div>
+      <div class="resumen-row total"><span>Total</span><strong id="p-total">—</strong></div>
+    </div>
+
+    <div class="card-preview">
+      <div class="card-chip"></div>
+      <div>
+        <div class="card-number-display" id="card-display">•••• •••• •••• ••••</div>
+      </div>
+      <div class="card-network">VISA</div>
+    </div>
+
+    <div class="form-group">
+      <label>Número de tarjeta</label>
+      <input type="text" id="card-num" maxlength="19" placeholder="1234 5678 9012 3456" oninput="formatCard(this)" inputmode="numeric" />
+    </div>
+    <div class="pago-2col">
+      <div class="form-group">
+        <label>Vencimiento</label>
+        <input type="text" id="card-exp" maxlength="5" placeholder="MM/AA" oninput="formatExp(this)" inputmode="numeric" />
+      </div>
+      <div class="form-group">
+        <label>CVV</label>
+        <input type="text" id="card-cvv" maxlength="3" placeholder="123" inputmode="numeric" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Nombre en la tarjeta</label>
+      <input type="text" id="card-nombre" placeholder="NOMBRE APELLIDO" style="text-transform:uppercase" autocomplete="cc-name" />
+    </div>
+
+    <p id="msg-pago"></p>
+
+    <button class="btn-primary" id="btn-pagar" onclick="procesarPago()" style="width:100%;justify-content:center;font-size:1rem;padding:14px 28px">
+      🔒 Pagar ahora
+    </button>
+
+    <div id="pago-progreso" class="pago-progreso hidden">
+      <div class="progreso-bar"><div class="progreso-fill" id="progreso-fill"></div></div>
+      <div class="progreso-steps" id="progreso-steps"></div>
+    </div>
+
+    <div class="pago-seguro">
+      <span>🔒 SSL 256-bit</span>
+      <span>💳 Visa · Mastercard · PSE</span>
+      <span>🛡 Pago seguro</span>
+    </div>
+  </div>
+</main>
+
+<script>
+const pedido = JSON.parse(sessionStorage.getItem('pedido_pendiente') || '{}');
+if (!pedido.funcion_id) {
+  document.querySelector('.pago-box').innerHTML = '<p style="color:var(--pearl-dim);text-align:center;padding:30px">No hay compra pendiente.<br><a href="/" style="color:var(--gold)">Volver a cartelera</a></p>';
+} else {
+  document.getElementById('p-pelicula').textContent  = pedido.pelicula || '—';
+  document.getElementById('p-funcion').textContent   = (pedido.fecha || '') + ' ' + ((pedido.hora||'').slice(0,5));
+  document.getElementById('p-asientos').textContent  = (pedido.num_asientos || 0) + ' asiento(s)';
+  document.getElementById('p-total').textContent     = '$' + Number(pedido.total).toLocaleString();
+}
+
+function formatCard(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,16);
+  el.value = v.match(/.{1,4}/g)?.join(' ') || v;
+  document.getElementById('card-display').textContent =
+    (v + '................').slice(0,16).replace(/(.{4})/g,'$1 ').trim().replace(/\d/g,(d,i)=>i<12?'•':d);
+}
+function formatExp(el) {
+  let v = el.value.replace(/\D/g,'');
+  if (v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2,4);
+  el.value = v;
+}
+
+const pasos = [
+  'Verificando tarjeta...',
+  'Autorizando pago...',
+  'Confirmando transacción...',
+  '¡Pago aprobado!'
+];
+
+async function procesarPago() {
+  const num    = document.getElementById('card-num').value.replace(/\s/g,'');
+  const exp    = document.getElementById('card-exp').value;
+  const cvv    = document.getElementById('card-cvv').value;
+  const nombre = document.getElementById('card-nombre').value.trim();
+  const msg    = document.getElementById('msg-pago');
+  if (num.length < 16 || exp.length < 5 || cvv.length < 3 || !nombre) {
+    msg.textContent = 'Completa todos los campos correctamente.';
+    msg.style.display = 'block';
+    return;
+  }
+  msg.style.display = 'none';
+  document.getElementById('btn-pagar').style.display = 'none';
+
+  const progreso = document.getElementById('pago-progreso');
+  const fill     = document.getElementById('progreso-fill');
+  const steps    = document.getElementById('progreso-steps');
+  progreso.classList.remove('hidden');
+
+  steps.innerHTML = pasos.map((p,i) =>
+    `<div class="step-item" id="step-${i}"><div class="step-dot" id="dot-${i}"></div><span>${p}</span></div>`
+  ).join('');
+
+  for (let i = 0; i < pasos.length; i++) {
+    document.getElementById('dot-'+i).classList.add('active');
+    fill.style.width = ((i+1)/pasos.length*100) + '%';
+    await new Promise(r => setTimeout(r, 700));
+    document.getElementById('dot-'+i).classList.replace('active','done');
+  }
+
+  const res  = await fetch('/api/tiquetes', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ funcion_id: pedido.funcion_id, asientos: pedido.asientos })
+  });
+  const data = await res.json();
+
+  if (res.ok) {
+    sessionStorage.removeItem('pedido_pendiente');
+    sessionStorage.setItem('ultimo_tiquete', JSON.stringify({
+      codigo: data.codigo, total: data.total, qr: data.qr,
+      pelicula: data.pelicula, fecha: data.fecha, hora: data.hora,
+      asientos: data.asientos
+    }));
+    window.location.href = '/resultado';
+  } else {
+    progreso.classList.add('hidden');
+    document.getElementById('btn-pagar').style.display = 'flex';
+    msg.textContent = data.error || 'Error al procesar el pago.';
+    msg.style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>
+
