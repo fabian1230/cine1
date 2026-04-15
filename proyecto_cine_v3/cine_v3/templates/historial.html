@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis Tiquetes – {{ brand_name }}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .hist-wrap { max-width:820px; margin:0 auto; padding:36px 20px; }
+    .hist-title { font-family:'Playfair Display',serif; font-size:2rem; margin-bottom:6px; }
+    .hist-sub { color:var(--pearl-dim); font-size:.9rem; margin-bottom:28px; }
+    .hist-card { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px 24px; margin-bottom:14px; display:flex; gap:20px; align-items:flex-start; transition:border-color .2s; }
+    .hist-card:hover { border-color:var(--border-2); }
+    .hist-poster { width:60px; aspect-ratio:2/3; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--panel-2); }
+    .hist-poster img { width:100%; height:100%; object-fit:cover; }
+    .hist-info { flex:1; min-width:0; }
+    .hist-info h4 { font-family:'Playfair Display',serif; font-size:1.05rem; margin-bottom:6px; }
+    .hist-info p { color:var(--pearl-dim); font-size:.82rem; margin-bottom:3px; }
+    .hist-info strong { color:var(--pearl); }
+    .hist-qr { flex-shrink:0; text-align:center; }
+    .hist-qr img { width:80px; height:80px; background:#fff; padding:4px; border-radius:6px; display:block; }
+    .hist-qr .cod { font-size:.63rem; color:var(--pearl-dim); letter-spacing:.06em; margin-top:4px; font-family:monospace; }
+    .badge-estado { display:inline-block; font-size:.7rem; font-weight:700; letter-spacing:.05em; padding:3px 10px; border-radius:20px; text-transform:uppercase; margin-top:6px; }
+    .badge-activo    { background:rgba(6,214,160,.15); color:#06d6a0; border:1px solid rgba(6,214,160,.3); }
+    .badge-usado     { background:rgba(212,168,67,.1); color:var(--gold); border:1px solid var(--border); }
+    .badge-cancelado { background:rgba(192,57,43,.15); color:var(--crimson-bright); border:1px solid rgba(192,57,43,.3); }
+    .btn-cancelar { background:none; border:1px solid var(--crimson); color:var(--crimson-bright); padding:5px 12px; border-radius:var(--radius-sm); cursor:pointer; font-size:.78rem; margin-top:8px; transition:all .2s; }
+    .btn-cancelar:hover { background:var(--crimson); color:#fff; }
+    @media(max-width:600px){ .hist-card{flex-direction:column;} .hist-qr{align-self:center;} }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">{{ brand_name }}</div>
+    <nav>
+      <a href="/">Cartelera</a>
+      <a href="/perfil" class="nav-usuario">👤 {{ usuario }}</a>
+      <a href="/logout">Salir</a>
+    </nav>
+  </div>
+</header>
+<main class="hist-wrap">
+  <h2 class="hist-title">Mis Tiquetes</h2>
+  <p class="hist-sub">Historial completo de tus compras</p>
+  <div id="historial-lista"><p class="loading">Cargando...</p></div>
+</main>
+<script>
+async function cargar() {
+  const res  = await fetch('/api/mis-tiquetes');
+  const data = await res.json();
+  const div  = document.getElementById('historial-lista');
+  if (!data.length) {
+    div.innerHTML = '<p class="vacio">Aún no compraste ningún tiquete. <a href="/" style="color:var(--gold)">Ver cartelera</a></p>';
+    return;
+  }
+  div.innerHTML = data.map(t => `
+    <div class="hist-card" id="card-${t.codigo}">
+      <div class="hist-poster">
+        <img src="${t.imagen || ''}" alt="${t.pelicula}" onerror="this.style.display='none'" loading="lazy"/>
+      </div>
+      <div class="hist-info">
+        <h4>${t.pelicula}</h4>
+        <p>📅 ${t.fecha} &nbsp;·&nbsp;  ${(t.hora||'').slice(0,5)} &nbsp;·&nbsp;  ${t.sala}</p>
+        <p>🎬 Formato: <strong>${t.formato||'2D'}</strong></p>
+        <p>💺 Asientos: <strong>${t.asientos.join(', ')}</strong></p>
+        <p>💰 Total: <strong>$${Number(t.total).toLocaleString()}</strong></p>
+        <p>🗓 Comprado: ${t.fecha_compra}</p>
+        <span class="badge-estado badge-${t.estado}">${t.estado}</span>
+        ${t.cancelable ? `<br><button class="btn-cancelar" onclick="cancelar('${t.codigo}')">Cancelar tiquete</button>` : ''}
+      </div>
+      <div class="hist-qr">
+        ${t.qr ? `<img src="data:image/png;base64,${t.qr}" alt="QR" />` : '<div style="width:80px;height:80px;background:var(--panel-2);border-radius:6px"></div>'}
+        <p class="cod">${t.codigo}</p>
+      </div>
+    </div>`).join('');
+}
+
+async function cancelar(codigo) {
+  if (!confirm('¿Cancelar este tiquete? Esta acción no se puede deshacer.')) return;
+  const res  = await fetch(`/api/tiquetes/${codigo}/cancelar`, {method:'POST'});
+  const data = await res.json();
+  if (res.ok) { cargar(); }
+  else { alert(data.error || 'Error al cancelar.'); }
+}
+
+cargar();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} – Admin</title>
+  <link rel="stylesheet" href="../static/styles.css" />
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">🎬 {{ brand_name }} – Admin</div>
+    <nav>
+      <a href="/">Cartelera</a>
+      <a href="/validar">Validar Tiquete</a>
+    </nav>
+  </div>
+</header>
+
+<main class="admin-layout">
+
+  <!-- ── Panel izquierdo: Películas ── -->
+  <section class="admin-card">
+    <h2>Registrar Película</h2>
+    <form id="form-pelicula">
+      <label>Título *<input type="text" name="titulo" required /></label>
+      <label>Descripción<textarea name="descripcion" rows="3"></textarea></label>
+      <label>Duración (min) *<input type="number" name="duracion" min="1" required /></label>
+      <label>Género<input type="text" name="genero" /></label>
+      <label>Clasificación
+        <select name="clasificacion">
+          <option value="ATP">ATP</option>
+          <option value="+7">+7</option>
+          <option value="+13">+13</option>
+          <option value="+18">+18</option>
+        </select>
+      </label>
+      <label>URL Imagen<input type="url" name="imagen_url" /></label>
+      <label>URL Trailer<input type="url" name="trailer_url" /></label>
+      <button type="submit" class="btn-primary">Guardar Película</button>
+      <p id="msg-pelicula" class="msg"></p>
+    </form>
+
+    <hr />
+
+    <h2>Películas Registradas</h2>
+    <div id="lista-peliculas-admin"></div>
+  </section>
+
+  <!-- ── Panel derecho: Funciones ── -->
+  <section class="admin-card">
+    <h2>Programar Función</h2>
+    <form id="form-funcion">
+      <label>Película *
+        <select name="pelicula_id" id="select-peliculas-funcion" required></select>
+      </label>
+      <label>Fecha *<input type="date" name="fecha" required /></label>
+      <label>Hora *<input type="time" name="hora" required /></label>
+      <label>Sala<input type="text" name="sala" value="Sala Principal" /></label>
+      <label>Precio *<input type="number" name="precio" min="0" step="500" required /></label>
+      <button type="submit" class="btn-primary">Crear Función</button>
+      <p id="msg-funcion" class="msg"></p>
+    </form>
+
+    <hr />
+
+    <h2>Dashboard</h2>
+    <div id="dashboard"></div>
+  </section>
+
+</main>
+
+<script>
+// ── Cargar películas ────────────────────────────────────────
+async function cargarPeliculasAdmin() {
+  const res  = await fetch('/api/peliculas');
+  const data = await res.json();
+
+  document.getElementById('lista-peliculas-admin').innerHTML = data.map(p => `
+    <div class="pelicula-item">
+      <strong>${p.titulo}</strong> (${p.clasificacion} · ${p.duracion} min)
+      <button onclick="eliminarPelicula(${p.id})" class="btn-danger btn-sm">Eliminar</button>
+    </div>
+  `).join('');
+
+  const sel = document.getElementById('select-peliculas-funcion');
+  sel.innerHTML = data.map(p => `<option value="${p.id}">${p.titulo}</option>`).join('');
+}
+
+async function eliminarPelicula(id) {
+  if (!confirm('¿Eliminar película?')) return;
+  await fetch(`/api/peliculas/${id}`, { method: 'DELETE' });
+  cargarPeliculasAdmin();
+}
+
+// ── Formulario película ─────────────────────────────────────
+document.getElementById('form-pelicula').addEventListener('submit', async e => {
+  e.preventDefault();
+  const form = e.target;
+  const body = Object.fromEntries(new FormData(form));
+  body.duracion = parseInt(body.duracion);
+
+  const res = await fetch('/api/peliculas', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  document.getElementById('msg-pelicula').textContent =
+    res.ok ? '✅ ' + data.mensaje : ' ' + data.error;
+  if (res.ok) { form.reset(); cargarPeliculasAdmin(); }
+});
+
+// ── Formulario función ──────────────────────────────────────
+document.getElementById('form-funcion').addEventListener('submit', async e => {
+  e.preventDefault();
+  const form = e.target;
+  const body = Object.fromEntries(new FormData(form));
+  body.pelicula_id = parseInt(body.pelicula_id);
+  body.precio      = parseFloat(body.precio);
+
+  const res = await fetch('/api/funciones', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  document.getElementById('msg-funcion').textContent =
+    res.ok ? '✅ ' + data.mensaje : ' ' + (data.error || data.mensaje);
+  if (res.ok) form.reset();
+});
+
+// ── Dashboard ───────────────────────────────────────────────
+async function cargarDashboard() {
+  const res  = await fetch('/api/admin/dashboard');
+  const data = await res.json();
+  document.getElementById('dashboard').innerHTML = `
+    <p>💰 Ventas totales: <strong>$${data.total_ventas.toLocaleString()}</strong></p>
+    <p>🎟 Tiquetes hoy: <strong>${data.tiquetes_hoy}</strong></p>
+    <table class="tabla-admin">
+      <thead><tr><th>Película</th><th>Fecha</th><th>Hora</th><th>Vendidos</th><th>Disponibles</th></tr></thead>
+      <tbody>
+        ${data.ocupacion_por_funcion.map(r => `
+          <tr>
+            <td>${r.pelicula}</td><td>${r.fecha}</td><td>${r.hora}</td>
+            <td>${r.vendidos}</td>
+            <td class="${r.disponibles < 20 ? 'alerta' : ''}">${r.disponibles}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+cargarPeliculasAdmin();
+cargarDashboard();
+</script>
+</body>
+</html>

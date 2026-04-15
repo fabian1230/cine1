@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Mi Perfil – {{ brand_name }}</title>
+  <link rel="stylesheet" href="/static/styles.css"/>
+  <style>
+    .perfil-wrap { max-width:520px; margin:50px auto; padding:0 20px; }
+    .perfil-card { background:var(--panel); border:1px solid var(--border-2); border-radius:var(--radius-lg); padding:40px 36px; position:relative; overflow:hidden; }
+    .perfil-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--gold-dim),var(--gold),var(--gold-dim)); }
+    .perfil-avatar { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,var(--gold-dim),var(--gold)); display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 20px; }
+    .perfil-nombre { font-family:'Playfair Display',serif; font-size:1.5rem; text-align:center; margin-bottom:4px; }
+    .perfil-email  { color:var(--pearl-dim); font-size:.875rem; text-align:center; margin-bottom:28px; }
+    .section-sep { border-color:var(--border); margin:24px 0; }
+    #msg-perfil { display:none; padding:10px 14px; border-radius:var(--radius-sm); font-size:.875rem; margin-bottom:12px; }
+    .msg-ok-inline  { background:rgba(6,78,59,.4); border:1px solid #06d6a0; color:#06d6a0; }
+    .msg-err-inline { background:rgba(192,57,43,.15); border:1px solid var(--crimson); color:var(--crimson-bright); }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">{{ brand_name }}</div>
+    <nav>
+      <a href="/">Cartelera</a>
+      <a href="/historial">Mis Tiquetes</a>
+      <a href="/logout">Salir</a>
+    </nav>
+  </div>
+</header>
+<main class="perfil-wrap">
+  <div class="perfil-card">
+    <div class="perfil-avatar">👤</div>
+    <h2 class="perfil-nombre" id="p-nombre">—</h2>
+    <p class="perfil-email" id="p-email">—</p>
+
+    <p id="msg-perfil"></p>
+
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input type="text" id="nombre" placeholder="Tu nombre" />
+    </div>
+    <div class="form-group">
+      <label>Teléfono (opcional)</label>
+      <input type="tel" id="telefono" placeholder="+57 300 000 0000" />
+    </div>
+    <button class="btn-primary" onclick="guardarPerfil()">Guardar cambios</button>
+
+    <hr class="section-sep" />
+    <h3 style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:16px;">Cambiar contraseña</h3>
+    <div class="form-group">
+      <label>Contraseña actual</label>
+      <input type="password" id="pass-actual" placeholder="••••••••" />
+    </div>
+    <div class="form-group">
+      <label>Nueva contraseña</label>
+      <input type="password" id="pass-nueva" placeholder="Mínimo 6 caracteres" />
+    </div>
+    <button class="btn-secondary" onclick="cambiarPassword()">Cambiar contraseña</button>
+  </div>
+</main>
+<script>
+async function cargarPerfil() {
+  const data = await fetch('/api/auth/me').then(r=>r.json());
+  document.getElementById('p-nombre').textContent   = data.nombre || '—';
+  document.getElementById('p-email').textContent    = data.email  || '—';
+  document.getElementById('nombre').value           = data.nombre || '';
+  document.getElementById('telefono').value         = data.telefono || '';
+}
+
+function showMsg(txt, ok=true) {
+  const el = document.getElementById('msg-perfil');
+  el.textContent = txt;
+  el.className = ok ? 'msg-ok-inline' : 'msg-err-inline';
+  el.style.display = 'block';
+  setTimeout(()=>{ el.style.display='none'; }, 3500);
+}
+
+async function guardarPerfil() {
+  const res  = await fetch('/api/auth/perfil', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ nombre: document.getElementById('nombre').value, telefono: document.getElementById('telefono').value })
+  });
+  const data = await res.json();
+  showMsg(res.ok ? '✓ '+data.mensaje : '✗ '+data.error, res.ok);
+  if (res.ok) cargarPerfil();
+}
+
+async function cambiarPassword() {
+  const pa = document.getElementById('pass-actual').value;
+  const pn = document.getElementById('pass-nueva').value;
+  if (!pa || !pn) { showMsg('Completa ambos campos.', false); return; }
+  const res  = await fetch('/api/auth/perfil', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password_actual: pa, password_nueva: pn })
+  });
+  const data = await res.json();
+  showMsg(res.ok ? '✓ '+data.mensaje : '✗ '+data.error, res.ok);
+  if (res.ok) { document.getElementById('pass-actual').value=''; document.getElementById('pass-nueva').value=''; }
+}
+
+cargarPerfil();
+</script>
+</body>
+</html>
+

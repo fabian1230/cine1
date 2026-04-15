@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seleccionar Asientos – {{ brand_name }}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .asientos-page { max-width:900px; margin:0 auto; padding:36px 20px; }
+    .funcion-banner { background:var(--panel); border:1px solid var(--border-2); border-radius:var(--radius); padding:16px 20px; margin-bottom:28px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .funcion-banner strong { color:var(--gold); font-family:'Playfair Display',serif; font-size:1.1rem; }
+    .funcion-banner span { color:var(--pearl-dim); font-size:.875rem; }
+    .pantalla-wrap { text-align:center; margin-bottom:28px; }
+    .pantalla-arc { display:inline-block; width:66%; height:10px; background:linear-gradient(90deg,transparent,var(--gold),transparent); border-radius:50%/10px; margin-bottom:6px; }
+    .pantalla-label { font-size:.7rem; letter-spacing:3px; color:var(--pearl-dim); text-transform:uppercase; }
+    .sala-grid { display:flex; flex-direction:column; gap:7px; align-items:center; margin-bottom:24px; }
+    .fila-asientos { display:flex; gap:5px; align-items:center; }
+    .fila-letra { width:22px; font-size:.72rem; color:var(--gold-dim); text-align:center; flex-shrink:0; font-weight:700; }
+    .gap-medio { width:16px; }
+    .asiento { width:32px; height:28px; border-radius:6px 6px 3px 3px; border:none; font-size:.68rem; font-weight:700; cursor:pointer; transition:all .14s; position:relative; }
+    .asiento.normal.disponible { background:linear-gradient(145deg,#1e8a52,#155f38); color:rgba(255,255,255,.9); box-shadow:0 2px 5px rgba(0,0,0,.4); }
+    .asiento.normal.disponible:hover { transform:translateY(-3px) scale(1.1); box-shadow:0 6px 14px rgba(37,194,110,.4); }
+    .asiento.vip.disponible { background:linear-gradient(145deg,#b8860b,#8b6508); color:#fff; box-shadow:0 2px 5px rgba(0,0,0,.4); }
+    .asiento.vip.disponible:hover { transform:translateY(-3px) scale(1.1); box-shadow:0 6px 14px rgba(212,168,67,.5); }
+    .asiento.ocupado { background:linear-gradient(145deg,#2a2a3a,#1d1d28); color:#444; cursor:not-allowed; }
+    .asiento.seleccionado { background:linear-gradient(145deg,var(--gold-light),var(--gold)) !important; color:var(--obsidian) !important; transform:translateY(-3px) scale(1.08); box-shadow:0 6px 20px rgba(212,168,67,.5) !important; }
+    .leyenda { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:24px; font-size:.77rem; color:var(--pearl-dim); }
+    .leyenda-item { display:flex; align-items:center; gap:6px; }
+    .punto { width:16px; height:14px; border-radius:4px 4px 2px 2px; }
+    .resumen-bar { background:var(--panel); border:1px solid var(--border-2); border-radius:var(--radius); padding:20px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+    .resumen-info p { font-size:.875rem; color:var(--pearl-dim); margin-bottom:4px; }
+    .resumen-info strong { color:var(--pearl); }
+    .resumen-total { font-family:'Playfair Display',serif; font-size:1.5rem; color:var(--gold); }
+    .vip-nota { font-size:.75rem; color:var(--gold-dim); margin-top:4px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">{{ brand_name }}</div>
+    <nav>
+      <a href="/"> Cartelera</a>
+      {% if logueado %}
+        <a href="/historial">Mis Tiquetes</a>
+        <a href="/perfil" class="nav-usuario">👤 {{ usuario }}</a>
+        <a href="/logout">Salir</a>
+      {% else %}
+        <a href="/login">Iniciar sesión</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<main class="asientos-page">
+  <div class="funcion-banner" id="funcion-banner">
+    <span>Cargando información...</span>
+  </div>
+
+  <div class="pantalla-wrap">
+    <div class="pantalla-arc"></div>
+    <div class="pantalla-label">Pantalla</div>
+  </div>
+
+  <div class="sala-grid" id="sala-grid"><p class="loading">Cargando asientos...</p></div>
+
+  <div class="leyenda">
+    <div class="leyenda-item"><div class="punto" style="background:linear-gradient(145deg,#1e8a52,#155f38)"></div> Normal</div>
+    <div class="leyenda-item"><div class="punto" style="background:linear-gradient(145deg,#b8860b,#8b6508)"></div> VIP (+30%)</div>
+    <div class="leyenda-item"><div class="punto" style="background:var(--gold);"></div> Seleccionado</div>
+    <div class="leyenda-item"><div class="punto" style="background:#2a2a3a;border:1px solid #333"></div> Ocupado</div>
+  </div>
+
+  <div class="resumen-bar">
+    <div class="resumen-info">
+      <p>Asientos: <strong id="txt-asientos">Ninguno</strong></p>
+      <p>Cantidad: <strong id="txt-cantidad">0</strong></p>
+      <p class="vip-nota" id="vip-nota" style="display:none"> Incluye asientos VIP</p>
+    </div>
+    <div class="resumen-total" id="txt-total">$0</div>
+    <button class="btn-primary" onclick="irAPago()">Continuar al pago →</button>
+  </div>
+</main>
+
+<script>
+const funcionId  = new URL(location.href).searchParams.get('funcion_id');
+let seleccionados = [], precioBase = 0, funcionData = null;
+
+if (!funcionId) {
+  document.getElementById('sala-grid').innerHTML = '<p class="error">No se especificó función. <a href="/" style="color:var(--gold)">Volver</a></p>';
+} else {
+  init();
+}
+
+async function init() {
+  const cartelera = await fetch('/api/cartelera').then(r => r.json());
+  for (const p of cartelera) {
+    const f = p.funciones.find(f => f.id == funcionId);
+    if (f) { funcionData = f; precioBase = f.precio; break; }
+  }
+  if (funcionData) {
+    const fmtColor = { 'IMAX':'color:var(--gold)', '3D':'color:#25c26e', '2D':'color:var(--pearl-dim)' };
+    document.getElementById('funcion-banner').innerHTML = `
+      <strong>${funcionData.pelicula}</strong>
+      <span>📅 ${funcionData.fecha} &nbsp; ${(funcionData.hora||'').slice(0,5)}</span>
+      <span> ${funcionData.sala}</span>
+      <span style="${fmtColor[funcionData.formato]||''}">${funcionData.formato||'2D'}</span>
+      <span>💰 Desde $${Number(precioBase).toLocaleString()}</span>`;
+  }
+  await renderAsientos();
+}
+
+async function renderAsientos() {
+  const grid = document.getElementById('sala-grid');
+  const data = await fetch(`/api/funciones/${funcionId}/asientos`).then(r => r.json());
+  grid.innerHTML = '';
+  const filas = {};
+  data.forEach(a => { (filas[a.fila] = filas[a.fila]||[]).push(a); });
+  Object.keys(filas).sort().forEach(fila => {
+    const row = document.createElement('div');
+    row.className = 'fila-asientos';
+    const lbl = () => { const s = document.createElement('span'); s.className='fila-letra'; s.textContent=fila; return s; };
+    const gap = () => { const d = document.createElement('div'); d.className='gap-medio'; return d; };
+    row.appendChild(lbl());
+    const sorted = filas[fila].sort((a,b)=>a.columna-b.columna);
+    sorted.forEach((a, i) => {
+      if (i === Math.floor(sorted.length/2)) row.appendChild(gap());
+      const btn = document.createElement('button');
+      btn.className = `asiento ${a.tipo||'normal'} ${a.ocupado?'ocupado':'disponible'}`;
+      btn.textContent = a.columna;
+      btn.title = `Fila ${a.fila} – ${a.columna}${a.tipo==='vip'?' (VIP)':''}`;
+      btn.disabled = a.ocupado;
+      btn.onclick = () => toggleSeat(btn, a);
+      row.appendChild(btn);
+    });
+    row.appendChild(lbl());
+    grid.appendChild(row);
+  });
+}
+
+function toggleSeat(btn, a) {
+  const idx = seleccionados.findIndex(s => s.id === a.id);
+  if (idx === -1) { seleccionados.push(a); btn.classList.add('seleccionado'); }
+  else { seleccionados.splice(idx,1); btn.classList.remove('seleccionado'); }
+  updateResumen();
+}
+
+function updateResumen() {
+  const total = seleccionados.reduce((acc, a) => acc + precioBase * (a.tipo==='vip'?1.3:1.0), 0);
+  const ids   = seleccionados.map(a=>`${a.fila}${a.columna}`).join(', ');
+  const hasVip = seleccionados.some(a => a.tipo==='vip');
+  document.getElementById('txt-asientos').textContent = ids || 'Ninguno';
+  document.getElementById('txt-cantidad').textContent = seleccionados.length;
+  document.getElementById('txt-total').textContent    = '$' + Math.round(total).toLocaleString();
+  document.getElementById('vip-nota').style.display   = hasVip ? 'block' : 'none';
+}
+
+function irAPago() {
+  if (!seleccionados.length) { alert('Selecciona al menos un asiento.'); return; }
+  const total = seleccionados.reduce((acc,a)=>acc+precioBase*(a.tipo==='vip'?1.3:1.0),0);
+  sessionStorage.setItem('pedido_pendiente', JSON.stringify({
+    funcion_id: parseInt(funcionId),
+    pelicula: funcionData?.pelicula,
+    fecha: funcionData?.fecha,
+    hora: funcionData?.hora,
+    sala: funcionData?.sala,
+    formato: funcionData?.formato,
+    asientos: seleccionados.map(a=>a.id),
+    asientos_labels: seleccionados.map(a=>`${a.fila}${a.columna}`),
+    num_asientos: seleccionados.length,
+    total: Math.round(total)
+  }));
+  location.href = '/pago';
+}
+</script>
+</body>
+</html>
+
