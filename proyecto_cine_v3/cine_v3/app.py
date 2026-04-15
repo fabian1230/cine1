@@ -52,15 +52,14 @@ def generar_qr(codigo):
         return ''
 
 def enviar_correo_bienvenida(destinatario, nombre):
-    """Envía un correo de bienvenida elegante si SMTP está configurado."""
     if not app.config.get('MAIL_ENABLED'):
         return False, 'mail_disabled'
 
     remitente = app.config.get('MAIL_FROM')
-    usuario = app.config.get('MAIL_USERNAME')
-    password = app.config.get('MAIL_PASSWORD')
-    host = app.config.get('MAIL_HOST')
-    port = app.config.get('MAIL_PORT')
+    usuario   = app.config.get('MAIL_USERNAME')
+    password  = app.config.get('MAIL_PASSWORD')
+    host      = app.config.get('MAIL_HOST')
+    port      = app.config.get('MAIL_PORT')
 
     if not all([remitente, usuario, password, host, port]):
         return False, 'mail_incomplete'
@@ -77,33 +76,22 @@ def enviar_correo_bienvenida(destinatario, nombre):
             <div style="padding:36px 32px;">
               <p style="margin:0 0 8px;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#d4a843;">Registro confirmado</p>
               <h1 style="margin:0 0 16px;font-family:Georgia,serif;font-size:34px;line-height:1.15;color:#ffffff;">Tu acceso premium ya está activo</h1>
-              <p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:#d7d2c2;">Hola <strong>{nombre}</strong>, gracias por registrarte en <strong>{BRAND_NAME}</strong>. Tu cuenta fue creada con éxito y ya puedes explorar la cartelera, reservar tus asientos favoritos y vivir una experiencia de cine más elegante desde el primer clic.</p>
-              <div style="margin:28px 0;padding:20px;border-radius:16px;background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.18);">
-                <p style="margin:0 0 8px;font-size:15px;color:#ffffff;"><strong>Lo que ya puedes hacer:</strong></p>
-                <p style="margin:0;font-size:15px;line-height:1.8;color:#d7d2c2;">Comprar entradas en línea, consultar tu historial, gestionar tus tiquetes y descubrir funciones con una estética más exclusiva.</p>
-              </div>
-              <a href="http://127.0.0.1:5000/" style="display:inline-block;padding:14px 24px;border-radius:999px;background:#d4a843;color:#080b12;text-decoration:none;font-weight:700;">Entrar a {BRAND_NAME}</a>
-              <p style="margin:28px 0 0;font-size:13px;line-height:1.7;color:#a9a392;">{BRAND_TAGLINE}. Si tú no realizaste este registro, puedes ignorar este mensaje.</p>
+              <p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:#d7d2c2;">Hola <strong>{nombre}</strong>, gracias por registrarte en <strong>{BRAND_NAME}</strong>.</p>
+              <a href="/" style="display:inline-block;padding:14px 24px;border-radius:999px;background:#d4a843;color:#080b12;text-decoration:none;font-weight:700;">Entrar a {BRAND_NAME}</a>
             </div>
           </div>
         </div>
       </body>
     </html>
     """
-    plain = (
-        f"Hola {nombre},\n\n"
-        f"Tu registro en {BRAND_NAME} fue exitoso.\n"
-        f"{BRAND_TAGLINE}.\n\n"
-        "Ya puedes iniciar sesión y comprar tus entradas.\n"
-        "Accede desde: http://127.0.0.1:5000/\n"
-    )
+    plain = f"Hola {nombre},\n\nTu registro en {BRAND_NAME} fue exitoso.\n{BRAND_TAGLINE}.\n"
 
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
-    msg['From'] = f"{app.config.get('MAIL_FROM_NAME')} <{remitente}>"
-    msg['To'] = destinatario
+    msg['From']    = f"{app.config.get('MAIL_FROM_NAME')} <{remitente}>"
+    msg['To']      = destinatario
     msg.attach(MIMEText(plain, 'plain', 'utf-8'))
-    msg.attach(MIMEText(html, 'html', 'utf-8'))
+    msg.attach(MIMEText(html,  'html',  'utf-8'))
 
     try:
         if app.config.get('MAIL_USE_SSL'):
@@ -117,14 +105,14 @@ def enviar_correo_bienvenida(destinatario, nombre):
             server.sendmail(remitente, [destinatario], msg.as_string())
         return True, 'sent'
     except Exception as e:
-        print(f"[WARN] No se pudo enviar correo de bienvenida a {destinatario}: {e}")
+        print(f"[WARN] No se pudo enviar correo a {destinatario}: {e}")
         return False, 'send_failed'
 
 # ============================================================
 #  SEGURIDAD
 # ============================================================
 def hash_password(password):
-    salt = uuid.uuid4().hex
+    salt   = uuid.uuid4().hex
     hashed = hashlib.sha256((salt + password).encode()).hexdigest()
     return f"{salt}:{hashed}"
 
@@ -152,7 +140,6 @@ def admin_required(f):
     return decorated
 
 def api_response(data, status=200, cache_seconds=0):
-    """Respuesta JSON con cabeceras de caché opcionales."""
     resp = make_response(jsonify(data), status)
     if cache_seconds > 0:
         resp.headers['Cache-Control'] = f'public, max-age={cache_seconds}'
@@ -193,7 +180,7 @@ class Funcion(db.Model):
     hora        = db.Column(db.Time, nullable=False)
     sala        = db.Column(db.String(50), default='Sala Principal')
     precio      = db.Column(db.Numeric(10, 2), nullable=False)
-    formato     = db.Column(db.String(10), default='2D')   # NUEVO: 2D, 3D, IMAX
+    formato     = db.Column(db.String(10), default='2D')
     estado      = db.Column(db.Enum('disponible', 'cancelada'), default='disponible')
     pelicula    = db.relationship('Pelicula', backref='funciones')
 
@@ -203,22 +190,22 @@ class Asiento(db.Model):
     numero  = db.Column(db.Integer, nullable=False)
     fila    = db.Column(db.String(1), nullable=False)
     columna = db.Column(db.Integer, nullable=False)
-    tipo    = db.Column(db.String(10), default='normal')   # NUEVO: normal, vip
+    tipo    = db.Column(db.String(10), default='normal')
     estado  = db.Column(db.Enum('activo', 'inactivo'), default='activo')
 
 class Tiquete(db.Model):
     __tablename__ = 'tiquetes'
-    id           = db.Column(db.Integer, primary_key=True)
-    codigo       = db.Column(db.String(50), unique=True, nullable=False)
-    usuario_id   = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
-    funcion_id   = db.Column(db.Integer, db.ForeignKey('funciones.id'), nullable=False)
-    fecha_compra = db.Column(db.DateTime, default=datetime.utcnow)
-    total        = db.Column(db.Numeric(10, 2), nullable=False)
-    nombre_cliente = db.Column(db.String(100))             # NUEVO
-    estado       = db.Column(db.Enum('activo', 'usado', 'cancelado'), default='activo')
-    funcion      = db.relationship('Funcion', backref='tiquetes')
-    detalles     = db.relationship('DetalleTiquete', backref='tiquete', cascade='all, delete-orphan')
-    usuario      = db.relationship('Usuario', backref='tiquetes')
+    id             = db.Column(db.Integer, primary_key=True)
+    codigo         = db.Column(db.String(50), unique=True, nullable=False)
+    usuario_id     = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    funcion_id     = db.Column(db.Integer, db.ForeignKey('funciones.id'), nullable=False)
+    fecha_compra   = db.Column(db.DateTime, default=datetime.utcnow)
+    total          = db.Column(db.Numeric(10, 2), nullable=False)
+    nombre_cliente = db.Column(db.String(100))
+    estado         = db.Column(db.Enum('activo', 'usado', 'cancelado'), default='activo')
+    funcion        = db.relationship('Funcion', backref='tiquetes')
+    detalles       = db.relationship('DetalleTiquete', backref='tiquete', cascade='all, delete-orphan')
+    usuario        = db.relationship('Usuario', backref='tiquetes')
 
 class DetalleTiquete(db.Model):
     __tablename__ = 'detalle_tiquete'
@@ -229,62 +216,39 @@ class DetalleTiquete(db.Model):
     asiento         = db.relationship('Asiento')
 
 def asegurar_columnas_compatibles():
-    """Agrega columnas faltantes cuando la BD viene de un esquema anterior."""
     inspector = inspect(db.engine)
     columnas_por_tabla = {
         tabla: {col['name'] for col in inspector.get_columns(tabla)}
         for tabla in inspector.get_table_names()
     }
-
     alter_statements = []
-
     if 'usuarios' in columnas_por_tabla and 'telefono' not in columnas_por_tabla['usuarios']:
-        alter_statements.append(
-            "ALTER TABLE usuarios ADD COLUMN telefono VARCHAR(20) NULL"
-        )
-
+        alter_statements.append("ALTER TABLE usuarios ADD COLUMN telefono VARCHAR(20) NULL")
     if 'peliculas' in columnas_por_tabla and 'trailer_url' not in columnas_por_tabla['peliculas']:
-        alter_statements.append(
-            "ALTER TABLE peliculas ADD COLUMN trailer_url VARCHAR(300) NULL"
-        )
-
+        alter_statements.append("ALTER TABLE peliculas ADD COLUMN trailer_url VARCHAR(300) NULL")
     if 'funciones' in columnas_por_tabla and 'formato' not in columnas_por_tabla['funciones']:
-        alter_statements.append(
-            "ALTER TABLE funciones ADD COLUMN formato VARCHAR(10) DEFAULT '2D'"
-        )
-
+        alter_statements.append("ALTER TABLE funciones ADD COLUMN formato VARCHAR(10) DEFAULT '2D'")
     if 'asientos' in columnas_por_tabla and 'tipo' not in columnas_por_tabla['asientos']:
-        alter_statements.append(
-            "ALTER TABLE asientos ADD COLUMN tipo VARCHAR(10) NOT NULL DEFAULT 'normal'"
-        )
-        alter_statements.append(
-            "UPDATE asientos SET tipo = 'vip' WHERE fila IN ('I', 'J')"
-        )
-
+        alter_statements.append("ALTER TABLE asientos ADD COLUMN tipo VARCHAR(10) NOT NULL DEFAULT 'normal'")
+        alter_statements.append("UPDATE asientos SET tipo = 'vip' WHERE fila IN ('I', 'J')")
     if 'tiquetes' in columnas_por_tabla and 'nombre_cliente' not in columnas_por_tabla['tiquetes']:
-        alter_statements.append(
-            "ALTER TABLE tiquetes ADD COLUMN nombre_cliente VARCHAR(100) NULL"
-        )
-
+        alter_statements.append("ALTER TABLE tiquetes ADD COLUMN nombre_cliente VARCHAR(100) NULL")
     for statement in alter_statements:
         db.session.execute(text(statement))
-
     if alter_statements:
         db.session.commit()
-        print("Esquema actualizado para compatibilidad con la version actual.")
+        print("Esquema actualizado para compatibilidad.")
 
 def normalizar_catalogo():
-    """Corrige posters conocidos cuando la BD tiene datos inconsistentes."""
     cambios = False
     for pelicula in Pelicula.query.all():
         poster_canonico = POSTERS_CANONICOS.get((pelicula.titulo or '').strip().lower())
         if poster_canonico and pelicula.imagen_url != poster_canonico:
             pelicula.imagen_url = poster_canonico
             cambios = True
-
     if cambios:
         db.session.commit()
-        print("Catalogo normalizado con posters canonicos.")
+        print("Catálogo normalizado.")
 
 # ============================================================
 #  PÁGINAS PÚBLICAS
@@ -485,21 +449,13 @@ def get_peliculas_admin():
     peliculas = Pelicula.query.filter_by(estado='activa').order_by(Pelicula.titulo.asc()).all()
     hoy = date.today()
     return api_response([{
-        'id': p.id,
-        'titulo': p.titulo,
-        'descripcion': p.descripcion,
-        'duracion': p.duracion,
-        'genero': p.genero,
-        'clasificacion': p.clasificacion,
-        'imagen_url': p.imagen_url,
+        'id': p.id, 'titulo': p.titulo, 'descripcion': p.descripcion,
+        'duracion': p.duracion, 'genero': p.genero,
+        'clasificacion': p.clasificacion, 'imagen_url': p.imagen_url,
         'trailer_url': p.trailer_url,
         'funciones': [{
-            'id': f.id,
-            'fecha': str(f.fecha),
-            'hora': str(f.hora),
-            'sala': f.sala,
-            'precio': float(f.precio),
-            'formato': f.formato
+            'id': f.id, 'fecha': str(f.fecha), 'hora': str(f.hora),
+            'sala': f.sala, 'precio': float(f.precio), 'formato': f.formato
         } for f in sorted(
             [fn for fn in p.funciones if fn.estado == 'disponible' and fn.fecha >= hoy],
             key=lambda fn: (fn.fecha, fn.hora)
@@ -547,11 +503,11 @@ def eliminar_pelicula(pid):
     return api_response({'mensaje': 'Película desactivada'})
 
 # ============================================================
-#  API CARTELERA  (un solo endpoint eficiente con JOIN)
+#  API CARTELERA
 # ============================================================
 @app.route('/api/cartelera', methods=['GET'])
 def api_cartelera():
-    hoy = date.today()
+    hoy    = date.today()
     genero = request.args.get('genero')
     peliculas = Pelicula.query.filter_by(estado='activa')
     if genero:
@@ -565,31 +521,26 @@ def api_cartelera():
                 'id': f.id, 'pelicula_id': p.id, 'pelicula': p.titulo,
                 'fecha': str(f.fecha), 'hora': str(f.hora),
                 'sala': f.sala, 'precio': float(f.precio),
-                'formato': f.formato,
-                'pasado': f.fecha < hoy
+                'formato': f.formato, 'pasado': f.fecha < hoy
             }
             for f in p.funciones
             if f.estado == 'disponible' and f.fecha >= hoy
         ]
         if not funciones:
             continue
-
-        item = {
+        item  = {
             'id': p.id, 'titulo': p.titulo, 'descripcion': p.descripcion,
             'duracion': p.duracion, 'genero': p.genero,
             'clasificacion': p.clasificacion, 'imagen_url': p.imagen_url,
             'trailer_url': p.trailer_url, 'funciones': funciones
         }
-        clave = (p.titulo or '').strip().lower()
+        clave    = (p.titulo or '').strip().lower()
         existente = cartelera_por_titulo.get(clave)
-
         if not existente:
             cartelera_por_titulo[clave] = item
             continue
-
         existente['funciones'].extend(funciones)
         existente['funciones'].sort(key=lambda f: (f['fecha'], f['hora']))
-
         if not existente.get('imagen_url') and item.get('imagen_url'):
             existente['imagen_url'] = item['imagen_url']
         if not existente.get('descripcion') and item.get('descripcion'):
@@ -644,7 +595,7 @@ def eliminar_funcion(fid):
     return api_response({'mensaje': 'Función eliminada'})
 
 # ============================================================
-#  API ASIENTOS  (consulta eficiente, una sola query)
+#  API ASIENTOS
 # ============================================================
 @app.route('/api/funciones/<int:fid>/asientos', methods=['GET'])
 def get_asientos_funcion(fid):
@@ -666,9 +617,9 @@ def get_asientos_funcion(fid):
 # ============================================================
 @app.route('/api/tiquetes', methods=['POST'])
 def comprar_tiquete():
-    data         = request.get_json()
-    funcion_id   = data.get('funcion_id')
-    asientos_ids = data.get('asientos', [])
+    data           = request.get_json()
+    funcion_id     = data.get('funcion_id')
+    asientos_ids   = data.get('asientos', [])
     nombre_cliente = data.get('nombre_cliente', session.get('nombre', 'Invitado'))
 
     if not funcion_id or not asientos_ids:
@@ -676,7 +627,6 @@ def comprar_tiquete():
 
     funcion = Funcion.query.get_or_404(funcion_id)
 
-    # Verificar disponibilidad en una sola query
     ocupados = db.session.query(DetalleTiquete.asiento_id).join(Tiquete).filter(
         Tiquete.funcion_id == funcion_id,
         Tiquete.estado.in_(['activo','usado']),
@@ -685,10 +635,9 @@ def comprar_tiquete():
     if ocupados:
         return api_response({'error': f'Asientos ocupados: {[r[0] for r in ocupados]}'}, 409)
 
-    # Calcular total con precios diferenciados por tipo de asiento
     asientos_obj = Asiento.query.filter(Asiento.id.in_(asientos_ids)).all()
-    precio_base = float(funcion.precio)
-    total = sum(precio_base * (1.3 if a.tipo == 'vip' else 1.0) for a in asientos_obj)
+    precio_base  = float(funcion.precio)
+    total        = sum(precio_base * (1.3 if a.tipo == 'vip' else 1.0) for a in asientos_obj)
 
     codigo  = str(uuid.uuid4()).replace('-','').upper()[:12]
     tiquete = Tiquete(
@@ -730,7 +679,6 @@ def cancelar_tiquete(codigo):
     t = Tiquete.query.filter_by(codigo=codigo, usuario_id=session['usuario_id']).first_or_404()
     if t.estado != 'activo':
         return api_response({'error': 'Solo se pueden cancelar tiquetes activos'}, 400)
-    # Solo cancelar si la función es en más de 2 horas
     funcion_dt = datetime.combine(t.funcion.fecha, t.funcion.hora)
     if funcion_dt - datetime.utcnow() < timedelta(hours=2):
         return api_response({'error': 'No se puede cancelar con menos de 2 horas de anticipación'}, 400)
@@ -767,8 +715,8 @@ def mis_tiquetes():
 # ============================================================
 @app.route('/api/tiquetes/validar', methods=['POST'])
 def validar_tiquete():
-    data    = request.get_json()
-    codigo  = data.get('codigo','').strip().upper()
+    data   = request.get_json()
+    codigo = data.get('codigo','').strip().upper()
     if not codigo:
         return api_response({'estado':'invalido','mensaje':'Código vacío'}, 400)
     t = Tiquete.query.filter_by(codigo=codigo).first()
@@ -802,7 +750,7 @@ def dashboard():
     tiquetes_hoy = Tiquete.query.filter(
         db.func.date(Tiquete.fecha_compra) == hoy).count()
     peliculas_activas = Pelicula.query.filter_by(estado='activa').count()
-    funciones_hoy = Funcion.query.filter_by(fecha=hoy, estado='disponible').count()
+    funciones_hoy     = Funcion.query.filter_by(fecha=hoy, estado='disponible').count()
     ocupacion = db.session.query(
         Funcion.id, Pelicula.titulo, Funcion.fecha, Funcion.hora, Funcion.sala,
         func.count(DetalleTiquete.id).label('vendidos')
@@ -813,7 +761,6 @@ def dashboard():
      .group_by(Funcion.id)\
      .order_by(Funcion.fecha, Funcion.hora)\
      .all()
-    # Ventas por género
     ventas_genero = db.session.query(
         Pelicula.genero,
         func.count(DetalleTiquete.id).label('cantidad')
@@ -852,9 +799,9 @@ def listar_usuarios():
 def eliminar_usuario_admin(uid):
     u = Usuario.query.get_or_404(uid)
     if u.rol == 'admin':
-        return api_response({'error': 'No se pueden eliminar cuentas administradoras desde este panel'}, 403)
+        return api_response({'error': 'No se pueden eliminar cuentas administradoras'}, 403)
     if session.get('usuario_id') == u.id:
-        return api_response({'error': 'No puedes eliminar tu propia cuenta desde la sesión activa'}, 400)
+        return api_response({'error': 'No puedes eliminar tu propia cuenta'}, 400)
     db.session.delete(u)
     db.session.commit()
     return api_response({'mensaje': 'Cuenta eliminada'})
@@ -869,8 +816,8 @@ def _generar_funciones_para(pelicula_id, n=4):
     formatos = ['2D', '3D', 'IMAX']
     hoy = date.today()
     for _ in range(n):
-        fecha   = hoy + timedelta(days=random.randint(0, 7))
-        hora    = dtime(random.randint(12, 22), random.choice([0, 15, 30, 45]))
+        fecha = hoy + timedelta(days=random.randint(0, 7))
+        hora  = dtime(random.randint(12, 22), random.choice([0, 15, 30, 45]))
         db.session.add(Funcion(
             pelicula_id=pelicula_id, fecha=fecha, hora=hora,
             sala=random.choice(salas),
@@ -890,58 +837,59 @@ def funciones_aleatorias():
     return api_response({'mensaje': 'Funciones regeneradas'})
 
 # ============================================================
-#  MAIN
+#  INICIALIZACIÓN – corre con gunicorn Y con python app.py
 # ============================================================
+with app.app_context():
+    db.create_all()
+    asegurar_columnas_compatibles()
+    normalizar_catalogo()
+    if not Usuario.query.filter_by(email='admin@cine.com').first():
+        db.session.add(Usuario(
+            nombre='Administrador', email='admin@cine.com',
+            contrasena=hash_password('admin123'), rol='admin'
+        ))
+        print("Admin creado: admin@cine.com / admin123")
+    if Pelicula.query.count() == 0:
+        seeds = [
+            ('Spider-Man: No Way Home', 'Peter Parker abre el multiverso.', 148, 'Acción', '+13',
+             'https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg'),
+            ('Avengers: Endgame', 'Los Vengadores restauran el universo.', 181, 'Acción', '+13',
+             'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg'),
+            ('The Dark Knight', 'Batman enfrenta al Joker en Gotham.', 152, 'Acción', '+16',
+             'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg'),
+            ('Dune: Parte Dos', 'Paul Atreides lidera a los Fremen.', 166, 'Ciencia Ficción', '+13',
+             'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg'),
+            ('Oppenheimer', 'El padre de la bomba atómica.', 180, 'Drama', '+13',
+             'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg'),
+            ('Deadpool & Wolverine', 'Dos antihéroes en el multiverso.', 127, 'Acción', '+18',
+             'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg'),
+            ('Inside Out 2', 'Las emociones de Riley adolescente.', 100, 'Animación', 'ATP',
+             'https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg'),
+            ('Toy Story 4', 'Woody ayuda a Forky a encontrar su lugar.', 100, 'Animación', 'ATP',
+             'https://image.tmdb.org/t/p/w500/w9kR8qbmQ01HwnvK4alvnQ2ca0L.jpg'),
+            ('John Wick 3', 'John Wick con precio por su cabeza.', 131, 'Acción', '+18',
+             'https://image.tmdb.org/t/p/w500/ziEuG1essDuWuC5lpWUaw1uXY2O.jpg'),
+            ('Alien: Romulus', 'Jóvenes enfrentan lo más aterrador.', 119, 'Terror', '+16',
+             'https://image.tmdb.org/t/p/w500/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg'),
+        ]
+        for titulo, desc, dur, genero, clasif, img in seeds:
+            p = Pelicula(titulo=titulo, descripcion=desc, duracion=dur,
+                         genero=genero, clasificacion=clasif, imagen_url=img)
+            db.session.add(p)
+            db.session.flush()
+            _generar_funciones_para(p.id, n=random.randint(3, 5))
+        print("Películas seed insertadas.")
+    if Asiento.query.count() == 0:
+        filas    = list('ABCDEFGHIJ')
+        columnas = range(1, 16)
+        num = 1
+        for fila in filas:
+            for col in columnas:
+                tipo = 'vip' if fila in ('I', 'J') else 'normal'
+                db.session.add(Asiento(numero=num, fila=fila, columna=col, tipo=tipo))
+                num += 1
+        print("150 asientos precargados (filas I-J son VIP).")
+    db.session.commit()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        asegurar_columnas_compatibles()
-        normalizar_catalogo()
-        if not Usuario.query.filter_by(email='admin@cine.com').first():
-            db.session.add(Usuario(nombre='Administrador', email='admin@cine.com',
-                                   contrasena=hash_password('admin123'), rol='admin'))
-            print("Admin: admin@cine.com / admin123")
-        # Seed películas si la BD está vacía
-        if Pelicula.query.count() == 0:
-            seeds = [
-                ('Spider-Man: No Way Home', 'Peter Parker abre el multiverso.', 148, 'Acción', '+13',
-                 'https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg'),
-                ('Avengers: Endgame', 'Los Vengadores restauran el universo.', 181, 'Acción', '+13',
-                 'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg'),
-                ('The Dark Knight', 'Batman enfrenta al Joker en Gotham.', 152, 'Acción', '+16',
-                 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg'),
-                ('Dune: Parte Dos', 'Paul Atreides lidera a los Fremen.', 166, 'Ciencia Ficción', '+13',
-                 'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg'),
-                ('Oppenheimer', 'El padre de la bomba atómica.', 180, 'Drama', '+13',
-                 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg'),
-                ('Deadpool & Wolverine', 'Dos antihéroes en el multiverso.', 127, 'Acción', '+18',
-                 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg'),
-                ('Inside Out 2', 'Las emociones de Riley adolescente.', 100, 'Animación', 'ATP',
-                 'https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg'),
-                ('Toy Story 4', 'Woody ayuda a Forky a encontrar su lugar.', 100, 'Animación', 'ATP',
-                 'https://image.tmdb.org/t/p/w500/w9kR8qbmQ01HwnvK4alvnQ2ca0L.jpg'),
-                ('John Wick 3', 'John Wick con precio por su cabeza.', 131, 'Acción', '+18',
-                 'https://image.tmdb.org/t/p/w500/ziEuG1essDuWuC5lpWUaw1uXY2O.jpg'),
-                ('Alien: Romulus', 'Jóvenes enfrentan lo más aterrador.', 119, 'Terror', '+16',
-                 'https://image.tmdb.org/t/p/w500/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg'),
-            ]
-            for titulo, desc, dur, genero, clasif, img in seeds:
-                p = Pelicula(titulo=titulo, descripcion=desc, duracion=dur,
-                             genero=genero, clasificacion=clasif, imagen_url=img)
-                db.session.add(p)
-                db.session.flush()
-                _generar_funciones_para(p.id, n=random.randint(3, 5))
-            print("Películas seed insertadas")
-        # Precargar 150 asientos si no existen
-        if Asiento.query.count() == 0:
-            filas   = list('ABCDEFGHIJ')
-            columnas = range(1, 16)
-            num = 1
-            for fila in filas:
-                for col in columnas:
-                    tipo = 'vip' if fila in ('I', 'J') else 'normal'
-                    db.session.add(Asiento(numero=num, fila=fila, columna=col, tipo=tipo))
-                    num += 1
-            print("150 asientos precargados (filas I-J son VIP)")
-        db.session.commit()
     app.run(debug=True, port=5000)
