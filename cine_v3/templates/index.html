@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} – Cartelera</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">{{ brand_name }}</div>
+    <nav>
+      <a href="/">Cartelera</a>
+      <a href="/validar">Validar</a>
+      {% if logueado %}
+        <a href="/historial">Mis Tiquetes</a>
+        {% if rol == 'admin' %}
+          <a href="/admin/panel" class="nav-usuario">👤 {{ usuario }}</a>
+        {% else %}
+          <a href="/perfil" class="nav-usuario">👤 {{ usuario }}</a>
+        {% endif %}
+        <a href="/logout">Salir</a>
+      {% else %}
+        <a href="/login">Iniciar sesión</a>
+        <a href="/registro-usuario" class="btn-nav">Registrarse</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section id="cartelera">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h2>Cartelera</h2>
+        <p style="color:var(--pearl-dim);font-size:.92rem;margin-top:8px">{{ brand_tagline }}</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <input type="text" id="buscador" placeholder=" Buscar película..." oninput="filtrarPeliculas()"
+          style="background:var(--panel-2);border:1px solid var(--border);color:var(--pearl);padding:8px 14px;border-radius:var(--radius-sm);font-size:.875rem;font-family:'DM Sans',sans-serif;outline:none;width:200px;" />
+        <select id="filtro-genero" onchange="filtrarPeliculas()"
+          style="background:var(--panel-2);border:1px solid var(--border);color:var(--pearl);padding:8px 12px;border-radius:var(--radius-sm);font-size:.875rem;font-family:'DM Sans',sans-serif;outline:none;">
+          <option value="">Todos los géneros</option>
+          <option>Acción</option><option>Drama</option><option>Comedia</option>
+          <option>Terror</option><option>Animación</option><option>Ciencia Ficción</option>
+          <option>Romance</option><option>Aventura</option>
+        </select>
+      </div>
+    </div>
+    <div id="peliculas-grid" class="grid"></div>
+  </section>
+
+  <!-- Modal selección de función -->
+  <div id="modal-funcion" class="modal hidden">
+    <div class="modal-box">
+      <button class="close-btn" onclick="cerrarModal('modal-funcion')">✕</button>
+      <h3 id="modal-pelicula-titulo"></h3>
+      <p>Selecciona una función para continuar:</p>
+      <div id="lista-funciones"></div>
+    </div>
+  </div>
+</main>
+
+<script src="/static/js/script.js"></script>
+<script>
+let todasPeliculas = [];
+
+async function cargarCartelera() {
+  const grid = document.getElementById('peliculas-grid');
+  grid.innerHTML = '<p class="loading">Cargando cartelera...</p>';
+  try {
+    todasPeliculas = await fetch('/api/cartelera').then(r => r.json());
+    renderPeliculas(todasPeliculas);
+  } catch {
+    grid.innerHTML = '<p class="error">Error al cargar. Verifica la conexión.</p>';
+  }
+}
+
+function renderPeliculas(lista) {
+  const grid = document.getElementById('peliculas-grid');
+  if (!lista.length) {
+    grid.innerHTML = '<p class="vacio">No hay películas disponibles.</p>';
+    return;
+  }
+  const PH = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='450' viewBox='0 0 300 450'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%23111925'/%3E%3Cstop offset='1' stop-color='%231f2a40'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='300' height='450' fill='url(%23g)'/%3E%3Ccircle cx='150' cy='145' r='52' fill='none' stroke='%23d4a843' stroke-width='6' opacity='0.75'/%3E%3Cpath d='M135 120 L185 145 L135 170 Z' fill='%23d4a843' opacity='0.85'/%3E%3Ctext x='150' y='250' font-size='25' text-anchor='middle' fill='%23e8e4d4' font-family='Arial'%3E{{ brand_name }}%3C/text%3E%3Ctext x='150' y='282' font-size='15' text-anchor='middle' fill='%23a09d8f' font-family='Arial'%3EPoster no disponible%3C/text%3E%3C/svg%3E";
+  grid.innerHTML = lista.map(p => `
+    <div class="pelicula-card" onclick="abrirFunciones(${p.id},'${escapar(p.titulo)}')">
+      <div class="pelicula-poster">
+        <img src="${p.imagen_url || PH}" alt="${escapar(p.titulo)}"
+             loading="lazy" onerror="this.onerror=null;this.src='${PH}';this.closest('.pelicula-poster').classList.add('poster-fallback')" />
+      </div>
+      <div class="pelicula-info">
+        <h3>${p.titulo}</h3>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px;">
+          ${p.clasificacion ? `<span class="badge-clasi">${p.clasificacion}</span>` : ''}
+          ${p.genero ? `<span style="font-size:.72rem;color:var(--pearl-dim)">${p.genero}</span>` : ''}
+          ${p.duracion ? `<span style="font-size:.72rem;color:var(--pearl-dim)">· ${p.duracion}min</span>` : ''}
+        </div>
+        <span class="badge" style="margin-top:6px">${p.funciones.length} función(es)</span>
+      </div>
+    </div>`).join('');
+}
+
+function filtrarPeliculas() {
+  const q = document.getElementById('buscador').value.toLowerCase();
+  const g = document.getElementById('filtro-genero').value.toLowerCase();
+  const filtradas = todasPeliculas.filter(p =>
+    (!q || p.titulo.toLowerCase().includes(q) || (p.genero||'').toLowerCase().includes(q)) &&
+    (!g || (p.genero||'').toLowerCase().includes(g))
+  );
+  renderPeliculas(filtradas);
+}
+
+document.addEventListener('DOMContentLoaded', cargarCartelera);
+</script>
+</body>
+</html>
+
+

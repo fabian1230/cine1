@@ -1,0 +1,2 @@
+-r cine_v3/requirements.txt
+gunicorn>=23.0

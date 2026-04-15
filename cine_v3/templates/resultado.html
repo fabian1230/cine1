@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ brand_name }} – Tu Tiquete</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .tiquete-container { margin-top: 50px; }
+    .tiquete-card {
+      animation: slideUp .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    .tiquete-pelicula {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--pearl);
+      margin-bottom: 8px;
+    }
+    .tiquete-info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: .85rem;
+      color: var(--pearl-dim);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tiquete-info-row:last-of-type { border: none; }
+    .tiquete-info-row strong { color: var(--pearl); }
+    .qr-wrapper {
+      background: white;
+      border-radius: var(--radius);
+      padding: 14px;
+      display: inline-block;
+      margin: 20px auto;
+    }
+    .success-icon {
+      width: 60px; height: 60px;
+      background: linear-gradient(135deg, #1a7a4a, #25c26e);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      margin: 0 auto 20px;
+      box-shadow: 0 0 30px rgba(37,194,110,0.4);
+      animation: popIn .5s .2s both cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .btn-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+    @media print {
+      header, .btn-group { display: none !important; }
+      body { background: white; }
+      .tiquete-card { border: 2px solid #333; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo">{{ brand_name }}</div>
+    <nav><a href="/"> Cartelera</a></nav>
+  </div>
+</header>
+
+<main>
+  <div class="tiquete-container">
+    <div class="tiquete-card" id="tiquete-card">
+      <div class="success-icon">✓</div>
+      <div class="tiquete-header">
+        <h2 style="font-family:'Playfair Display',serif;color:var(--gold);font-size:1.4rem;margin-bottom:6px;">¡Compra Exitosa!</h2>
+        <p id="tiq-pelicula" class="tiquete-pelicula"></p>
+      </div>
+
+      <hr class="tiquete-divider">
+
+      <div id="tiquete-detalles">
+        <div class="tiquete-info-row"><span>Código</span><strong><span class="codigo-display" id="tiq-codigo"></span></strong></div>
+        <div class="tiquete-info-row"><span>Fecha y hora</span><strong id="tiq-fecha"></strong></div>
+        <div class="tiquete-info-row"><span>Asientos</span><strong id="tiq-asientos"></strong></div>
+        <div class="tiquete-info-row"><span>Total</span><strong style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--gold)" id="tiq-total"></strong></div>
+      </div>
+
+      <hr class="tiquete-divider">
+
+      <div style="text-align:center">
+        <p style="color:var(--pearl-dim);font-size:.8rem;margin-bottom:4px;letter-spacing:0.05em;text-transform:uppercase;">Código QR de acceso</p>
+        <div class="qr-wrapper">
+          <img id="qr-img" src="" alt="QR" style="width:180px;height:180px;display:block;" />
+        </div>
+        <p class="info-qr">Presenta este código en la entrada del cine</p>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-primary" onclick="window.print()">🖨 Imprimir</button>
+        <a href="/" class="btn-secondary"> Volver a cartelera</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const datos = JSON.parse(sessionStorage.getItem('ultimo_tiquete') || '{}');
+if (datos.codigo) {
+  document.getElementById('tiq-codigo').textContent   = datos.codigo;
+  document.getElementById('tiq-total').textContent    = '$' + Number(datos.total).toLocaleString();
+  document.getElementById('tiq-pelicula').textContent = datos.pelicula || '';
+  document.getElementById('tiq-fecha').textContent    = (datos.fecha || '') + ' ' + ((datos.hora||'').slice(0,5));
+  document.getElementById('tiq-asientos').textContent = (datos.asientos || '?') + ' asiento(s)';
+  if (datos.qr) {
+    document.getElementById('qr-img').src = 'data:image/png;base64,' + datos.qr;
+  }
+} else {
+  document.getElementById('tiquete-card').innerHTML =
+    '<p style="color:var(--pearl-dim);text-align:center;padding:30px">No se encontró información del tiquete.<br><a href="/" style="color:var(--gold)">Volver a cartelera</a></p>';
+}
+</script>
+</body>
+</html>
+
